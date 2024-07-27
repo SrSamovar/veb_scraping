@@ -3,12 +3,12 @@ import requests
 import json
 
 
-def get_vacancies(url, headers):
-    main_response = requests.get(url, headers=headers)
+def pars_vacancies(url, headers, params):
+    main_response = requests.get(url, params=params, headers=headers)
     main_html_data = main_response.text
     main_soup = bs4.BeautifulSoup(main_html_data, "lxml")
     item = main_soup.find("div", id="a11y-main-content")
-    items = item.find_all("div", class_="vacancy-search-item__card serp-item_link vacancy-card-container--OwxCdOj5QlSlCBZvSggS vacancy-card_clickme--Ti9glrpeP1wwAE3hAklj")
+    items = item.find_all("div", class_="vacancy-search-item__card serp-item_link vacancy-card-container--OwxCdOj5QlSlCBZvSggS")
 
     parsed_vacancy = []
 
@@ -29,32 +29,34 @@ def get_vacancies(url, headers):
         company = company_tag.text if company_tag else "Не указано"
         city_tag = vacancy_soup.find("span", {"data-qa": "vacancy-view-raw-address"})
         city = city_tag.text if city_tag else "Не указано"
-        description_tag = vacancy_soup.find("div", class_="g-user-content")
-        description = description_tag.text if description_tag else "Нет описания"
-        index_1 = description.find('Django')
-        index_2 = description.find('Flask')
-        if index_1 != -1 or index_2 != -1:
-            parsed_vacancy.append({
-                "title": title,
-                "link": main_link,
-                "salary": salary,
-                "company": company,
-                "city": city
-                })
-        return parsed_vacancy
+        parsed_vacancy.append({
+            "title": title,
+            "link": main_link,
+            "salary": salary,
+            "company": company,
+            "city": city
+            })
+    return parsed_vacancy
     
 def write_vacancy(vacancies):
-    with open("parsed_vacancies.json", "w") as f:
-        json.dump(vacancies, f, indent=4)
+    if not vacancies:
+        print("Нет найденных вакансий")
+        return
+    with open('vacancy.json', 'w', encoding='utf-8') as f:
+        json.dump(vacancies, f, ensure_ascii=False, indent=4)
+        print("Данные занесены в файл")
+
 
 
 if __name__ == "__main__":
     headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.82 Safari/537.36'
     }
-    url = "https://spb.hh.ru/search/vacancy?text=python&area=1&area=2"
-
-    get = get_vacancies(url, headers)
+    base_url = "https://spb.hh.ru/search/vacancy"
+    params = {
+        "text": "python, django, flask",
+        "area": [1,2],
+    }
+    get = pars_vacancies(base_url,headers, params)
     write_vacancy(get)
-    print("Вакансии занесены в файл")
     
